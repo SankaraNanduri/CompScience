@@ -1,0 +1,114 @@
+import java.io.*;
+import java.util.*;
+
+public class DFSMSimulator {
+
+    public static void main(String[] args) {
+        // Check for the correct number of command line arguments
+        if (args.length != 2) {
+            System.out.println("Usage: java DFSMSimulator <dfsm_file> <input_file>");
+            return;
+        }
+
+        // Get the file names from the command line arguments
+        String dfsmFileName = args[0];
+        String inputFileName = args[1];
+
+        try {
+            // Parse the DFSM file to create a DFSM object
+            DFSM dfsm = parseDFSMFile(dfsmFileName);
+
+            // Read the input string from the input file
+            String inputString = readInputString(inputFileName);
+
+            // Simulate the DFSM with the input string and print the result
+            boolean result = simulateDFSM(dfsm, inputString);
+            System.out.println(result ? "yes" : "no");
+
+        } catch (IOException e) {
+            // Handle any IO errors (e.g., file not found)
+            System.err.println("Error reading files: " + e.getMessage());
+        }
+    }
+
+    // Method to parse the DFSM specification file and create a DFSM object
+    private static DFSM parseDFSMFile(String fileName) throws IOException {
+        BufferedReader reader = new BufferedReader(new FileReader(fileName));
+        List<Character> alphabet = new ArrayList<>();
+        List<int[]> transitionTable = new ArrayList<>();
+        Set<Integer> acceptingStates = new HashSet<>();
+
+        // First section: Alphabet
+        String line = reader.readLine().trim();
+        for (String symbol : line.split("\\s+")) {
+            alphabet.add(symbol.charAt(0));
+        }
+
+        // Second section: Transition Table
+        while ((line = reader.readLine()) != null && !line.trim().isEmpty()) {
+            String[] parts = line.trim().split("\\s+");
+            int[] row = Arrays.stream(parts).mapToInt(Integer::parseInt).toArray();
+            transitionTable.add(row);
+        }
+
+        // Third section: Accepting States
+        if ((line = reader.readLine()) != null) {
+            for (String state : line.trim().split("\\s+")) {
+                acceptingStates.add(Integer.parseInt(state));
+            }
+        }
+
+        reader.close();
+
+        // Convert transition table list to a 2D array
+        int[][] transitionTableArray = new int[transitionTable.size()][];
+        transitionTable.toArray(transitionTableArray);
+
+        return new DFSM(alphabet, transitionTableArray, acceptingStates);
+    }
+
+    // Method to read the input string from a file
+    private static String readInputString(String fileName) throws IOException {
+        BufferedReader reader = new BufferedReader(new FileReader(fileName));
+        String inputString = reader.readLine().trim();
+        reader.close();
+        return inputString;
+    }
+
+    // Method to simulate the DFSM with the given input string
+    private static boolean simulateDFSM(DFSM dfsm, String inputString) {
+        int currentState = 1; // Start state is always state 1
+        Map<Character, Integer> alphabetIndex = new HashMap<>();
+
+        // Map each alphabet character to its column index in the transition table
+        for (int i = 0; i < dfsm.alphabet.size(); i++) {
+            alphabetIndex.put(dfsm.alphabet.get(i), i);
+        }
+
+        // Process each character in the input string
+        for (char c : inputString.toCharArray()) {
+            if (alphabetIndex.containsKey(c)) {
+                int columnIndex = alphabetIndex.get(c);
+                currentState = dfsm.transitionTable[currentState - 1][columnIndex];
+            } else {
+                return false; // Invalid character in input string
+            }
+        }
+
+        // Check if the final state is an accepting state
+        return dfsm.acceptingStates.contains(currentState);
+    }
+}
+
+// Class to represent the DFSM with its components: alphabet, transition table, and accepting states
+class DFSM {
+    List<Character> alphabet;          // List of symbols in the alphabet
+    int[][] transitionTable;           // Transition table (2D array)
+    Set<Integer> acceptingStates;      // Set of accepting states
+
+    public DFSM(List<Character> alphabet, int[][] transitionTable, Set<Integer> acceptingStates) {
+        this.alphabet = alphabet;
+        this.transitionTable = transitionTable;
+        this.acceptingStates = acceptingStates;
+    }
+}
